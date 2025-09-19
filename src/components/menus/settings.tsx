@@ -42,7 +42,7 @@ export const SettingsView = () => {
 		<ModalButton
 			vis={visible}
 			onToggle={onModalToggle}
-			icon="settings-outline"
+			icon="cog-outline"
 			containerStyle={{ minWidth: '35%' }}
 		>
 			<Text style={{ fontSize: 24, fontWeight: '800' }}>Settings</Text>

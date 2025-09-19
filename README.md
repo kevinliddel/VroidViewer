@@ -3,12 +3,11 @@ A React Native demo of [three-vrm](https://github.com/pixiv/three-vrm).
 
 ### Platforms
 ✅ Web  
-➖ Android - See the below issues. 
-➖ iOS - Not tested.
+➖ Android and iOS - See the below issues. 
 
 ## Known Mobile Issues
-- VRM0 models only render some of the head on mobile.
-- Some models (both 0.0 and 1.0) dont render at all with or without the VRMLoaderPlugin.
+- The model **VRM1_Constraint_Twist_Sample** (named vrm1.vrm in this project) is the only model that renders correctly
+- The other model are lacking texture
 - GLTFLoader progress callback is ignored on mobile.
 
 # To-Do
