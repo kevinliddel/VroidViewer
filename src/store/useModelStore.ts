@@ -9,20 +9,13 @@ import * as THREE from 'three';
 
 export const MODELS = {
     vrm0: require('../../assets/models/vrm0.vrm'),
-    vrm1: require('../../assets/models/vrm1.vrm')
+    vrm1: require('../../assets/models/vrm1.vrm'),
+    Sonya: require('../../assets/models/Sonya_Sinclair.vrm')
 };
 
 export const ANIMS = {
     idle: require('../../assets/animations/idle_loop.vrma'),
-
-    // Comment these animation if you didn't download the motion packs
-    // full_body: require('../../assets/animations/motion_pack/VRMA_01.vrma'),
-    // greeting: require('../../assets/animations/motion_pack/VRMA_02.vrma'),
-    // peace_sign: require('../../assets/animations/motion_pack/VRMA_03.vrma'),
-    // shoot: require('../../assets/animations/motion_pack/VRMA_04.vrma'),
-    // spin: require('../../assets/animations/motion_pack/VRMA_05.vrma'),
-    // model_pose: require('../../assets/animations/motion_pack/VRMA_06.vrma'),
-    // squat: require('../../assets/animations/motion_pack/VRMA_07.vrma'),
+    happy_synthesizer: require('../../assets/animations/Happy_Synthesizer.vrma'),
 }
 
 type ModelName = keyof typeof MODELS;

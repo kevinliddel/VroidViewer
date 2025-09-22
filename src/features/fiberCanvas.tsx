@@ -83,24 +83,50 @@ export const FiberCanvas = () => {
 			<View {...events} style={{ flex: 1 }}>
 				<Canvas
 					onCreated={({ gl, camera }) => {
-						const _gl = gl.getContext();
+						if (Platform.OS === 'ios' || Platform.OS === 'android') {
+							console.log('Configuring WebGL for native mobile build');
 
-						// Basic WebGL configuration
-						gl.outputColorSpace = THREE.SRGBColorSpace;
-						gl.toneMapping = THREE.ACESFilmicToneMapping;
-						gl.toneMappingExposure = 1.3;
+							const _gl = gl.getContext();
 
-						// Shadow configuration
-						gl.shadowMap.enabled = true;
-						gl.shadowMap.type = THREE.PCFShadowMap;
+							const pixelStorei = _gl.pixelStorei.bind(_gl);
+							_gl.pixelStorei = function (...args) {
+								const [parameter] = args;
+								switch (parameter) {
+									case _gl.UNPACK_FLIP_Y_WEBGL:
+										return pixelStorei(...args);
+								}
+							};
 
-						// Force precision
-						gl.capabilities.precision = 'highp';
-						gl.capabilities.logarithmicDepthBuffer = false;
+							// Basic WebGL configuration
+							gl.outputColorSpace = THREE.SRGBColorSpace;
+							gl.toneMapping = THREE.ACESFilmicToneMapping;
+							gl.toneMappingExposure = 1.3;
 
-						console.log('WebGL Renderer:', _gl.getParameter(_gl.RENDERER));
-						console.log('WebGL Version:', _gl.getParameter(_gl.VERSION));
-						console.log('WebGL Vendor:', _gl.getParameter(_gl.VENDOR));
+							// Shadow configuration
+							gl.shadowMap.enabled = true;
+							gl.shadowMap.type = THREE.PCFShadowMap;
+
+							// Force precision
+							gl.capabilities.precision = 'highp';
+							gl.capabilities.logarithmicDepthBuffer = false;
+
+							console.log('WebGL Renderer:', _gl.getParameter(_gl.RENDERER));
+							console.log('WebGL Version:', _gl.getParameter(_gl.VERSION));
+							console.log('WebGL Vendor:', _gl.getParameter(_gl.VENDOR));
+
+							// Log WebGL capabilities
+							console.log('Max texture size:', _gl.getParameter(_gl.MAX_TEXTURE_SIZE));
+							console.log('Max vertex attributes:', _gl.getParameter(_gl.MAX_VERTEX_ATTRIBS));
+							console.log('Supported extensions:', _gl.getSupportedExtensions());
+
+							// Check for required extensions
+							const requiredExtensions = ['OES_texture_float', 'OES_element_index_uint'];
+							requiredExtensions.forEach(ext => {
+								if (!_gl.getExtension(ext)) {
+									console.warn(`Missing WebGL extension: ${ext}`);
+								}
+							});
+						}
 
 						// Camera positioning
 						if (Platform.OS === "web") {
@@ -133,7 +159,25 @@ export const FiberCanvas = () => {
 						<Model />
 					</Suspense>
 					<Grid />
-					<OrbitControls target={new Vector3(0, 1, 0)} enableRotate enableZoom />
+					<OrbitControls
+						target={new Vector3(0, 1.2, 0)}
+						enableRotate
+						enableZoom
+						minZoom={Platform.OS === 'web' ? 2 : 1.2}
+						maxZoom={Platform.OS === 'web' ? 12 : 8}
+						// Vertical rotation limits
+						minPolarAngle={Math.PI * 0.1}
+						maxPolarAngle={Math.PI * 0.75}
+						// Horizontal rotation limits
+						minAzimuthAngle={-Math.PI * 0.5}
+						maxAzimuthAngle={Math.PI * 0.5}
+						// Additional settings
+						enablePan={true}
+						dampingFactor={0.05}
+						rotateSpeed={0.5}
+						zoomSpeed={0.8}
+						panSpeed={1}
+					/>
 				</Canvas>
 			</View>
 			<MenusContainer />

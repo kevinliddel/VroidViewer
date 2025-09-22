@@ -128,6 +128,19 @@ export const ModelSelector = () => {
 						color={modelName === 'vrm1' ? '#ffffff' : '#4a5568'}
 					/>
 				</View>
+
+				<View style={{
+					backgroundColor: modelName === 'Sonya' ? '#4299e1' : '#e2e8f0',
+					borderRadius: 8,
+					overflow: 'hidden',
+				}}>
+					<Button
+						title="Sonya"
+						onPress={() => changeModel('Sonya')}
+						disabled={modelName === 'Sonya'}
+						color={modelName === 'Sonya' ? '#ffffff' : '#4a5568'}
+					/>
+				</View>
 			</View>
 
 			{isLoading ? (

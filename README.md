@@ -24,4 +24,4 @@ If you want to test the extra animations in the demo:
 1. Download the [motion pack](https://vroid.booth.pm/items/5512385).
 2. Extract and place the VRMA files in the assets/animations/motion_pack folder.
 
-This works with Expo Go, so building isn't required.
+This works with Expo Go 53, so building isn't required.
