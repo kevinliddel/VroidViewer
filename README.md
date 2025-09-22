@@ -7,6 +7,7 @@ A React Native demo of [three-vrm](https://github.com/pixiv/three-vrm).
 
 ## Android
 - You can see the result on an Android Emulator:
+  
   <img src="./assets/images/Android_emulator.png" width="300"/>
 
 The model is rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
@@ -60,8 +61,10 @@ If you want to test the more animations, you can:
 1. Go to [Mixamo](https://www.mixamo.com/):
 2. Choose an animation you like
 3. Download it as FBX without skin, with 30 fps
+   
    <img src="./assets/images/Mixamo.png" width="300"/>
 
 This works with Expo Go 53, so building isn't required.
+
 
 If you wanna test on Expo Go for iOS, you'll need to update the package and migrate to expo SDK 54
