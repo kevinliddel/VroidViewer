@@ -5,9 +5,33 @@ A React Native demo of [three-vrm](https://github.com/pixiv/three-vrm).
 ✅ Web  
 ➖ Android and iOS - See the below issues. 
 
+## Android
+- You can see the result on an Android Emulator:
+<a href="#"><img src="./assets/images/Android_emulator.png" width="300"/></a>
+
+The model is rendered correctly for **VRM1_Constraint_Twist_Sample.vrm** 
+
+- As for any other models, we have issues with the textures.
+  - vrm 0.x models:
+    <a href="#"><img src="./assets/images/Android_issue_vrm0.png" width="300"/></a>
+  - vrm 1 models:
+    <a href="#"><img src="./assets/images/Android_issue_vrm1.png" width="300"/></a>
+
+## iOS
+- As for the iOS, it was tested on a development build directly on a physical device (iPhone 11):
+  <a href="#"><img src="./assets/images/iOS_real_device.png" width="300"/></a>
+
+The model is also rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
+
+- Like with Android, we have issues with the textures on any other models.
+    - vrm 0.x models:
+      <a href="#"><img src="./assets/images/iOS_issue_vrm0.png" width="300"/></a>
+    - vrm 1 models:
+      <a href="#"><img src="./assets/images/iOS_issue_vrm1.png" width="300"/></a>
+
 ## Known Mobile Issues
-- The model **VRM1_Constraint_Twist_Sample** (named vrm1.vrm in this project) is the only model that renders correctly
-- The other model are lacking texture
+- As you may have seen, The model **VRM1_Constraint_Twist_Sample** (named vrm1.vrm in this project) is the only model that renders correctly
+- The other models are lacking texture
 - GLTFLoader progress callback is ignored on mobile.
 
 # To-Do
@@ -25,3 +49,4 @@ If you want to test the extra animations in the demo:
 2. Extract and place the VRMA files in the assets/animations/motion_pack folder.
 
 This works with Expo Go 53, so building isn't required.
+If you wanna test on Expo Go for iOS, you'll need to update the package and migrate to expo SDK 54 
