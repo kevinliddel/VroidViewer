@@ -18,8 +18,9 @@ The model is rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
     <a href="#"><img src="./assets/images/Android_issue_vrm1.png" width="300"/></a>
 
 ## iOS
-- As for the iOS, it was tested on a development build directly on a physical device (iPhone 11):
+- As for the iOS, it was tested on a development build directly on a physical device (iPhone 11) and an iOS Simulator (iPhone 17 Pro Max).:
   <a href="#"><img src="./assets/images/iOS_real_device.png" width="300"/></a>
+  <a href="#"><img src="./assets/images/iOS_Simulator.png" width="300"/></a>
 
 The model is also rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
 
@@ -49,6 +50,14 @@ If you want to test the extra animations in the demo:
 
 1. Download the [motion pack](https://vroid.booth.pm/items/5512385).
 2. Extract and place the VRMA files in the assets/animations/motion_pack folder.
+
+### Mixamo Animations
+If you want to test the more animations, you can:
+
+1. Go to [Mixamo](https://www.mixamo.com/):
+2. Choose an animation you like
+3. Download it as FBX without skin, with 30 fps
+   <a href="#"><img src="./assets/images/Mixamo.png" width="300"/></a>
 
 This works with Expo Go 53, so building isn't required.
 If you wanna test on Expo Go for iOS, you'll need to update the package and migrate to expo SDK 54 

@@ -1,4 +1,4 @@
-import { Button, Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity } from 'react-native';
 import { ANIMS, useModelStore } from '../../store/useModelStore';
 import { ModalButton } from '../modal';
 import { useModal } from '../../hooks/useModal';

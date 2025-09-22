@@ -1,10 +1,12 @@
 import { MToonMaterialLoaderPlugin, VRMCore, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { createVRMAnimationClip, VRMAnimationLoaderPlugin, VRMLookAtQuaternionProxy } from '@pixiv/three-vrm-animation';
 import { Platform } from 'react-native';
-import { AnimationMixer, PerspectiveCamera, Scene } from 'three';
+import { AnimationMixer, PerspectiveCamera, Scene, AnimationClip } from 'three';
 import { GLTFLoader } from 'three-stdlib';
+import { Asset } from 'expo-asset';
 import { create } from 'zustand';
 import { getVrmThumbnail } from '../utils/vrm';
+import { loadMixamoAnimation } from '../utils/animation';
 import * as THREE from 'three';
 
 export const MODELS = {
@@ -18,8 +20,14 @@ export const ANIMS = {
     happy_synthesizer: require('../../assets/animations/Happy_Synthesizer.vrma'),
 }
 
+export const MIXAMO_ANIMS = {
+    salute: require('../../assets/animations/Salute.fbx'),
+    hello: require('../../assets/animations/Idle.fbx'),
+}
+
 type ModelName = keyof typeof MODELS;
 type AnimName = keyof typeof ANIMS;
+type MixamoAnimName = keyof typeof MIXAMO_ANIMS;
 
 type ModelSettings = {
     enableEyeLookAt: boolean;
@@ -40,13 +48,18 @@ export type ModelState = {
     modelName: ModelName;
     modelUri: string;
     thumbnail: string | null;
-    animationName: AnimName;
+    animationName: AnimName | null;
+    mixamoAnimationName: MixamoAnimName | null;
     vrm: VRMCore | null;
     mixer: AnimationMixer | null;
+    mixamoMixer: AnimationMixer | null;
+    loadedMixamoAnimations: Map<MixamoAnimName, AnimationClip>;
+    mixamoActions: Map<MixamoAnimName, THREE.AnimationAction>;
     isLoading: boolean;
     loadProgress: number;
     settings: ModelSettings;
     camera: PerspectiveCamera;
+    currentAnimationType: 'vrma' | 'mixamo' | null;
 };
 
 export type ModelAction = {
@@ -54,6 +67,9 @@ export type ModelAction = {
     loadModel: (uri: string, scene: Scene) => Promise<void>;
     updateModelSettings: (params: Partial<ModelSettings>) => void;
     loadAnimation: (name: AnimName) => Promise<void>;
+    loadMixamoAnimation: (name: MixamoAnimName) => Promise<boolean>;
+    playMixamoAnimation: (name: MixamoAnimName) => void;
+    updateAnimations: (deltaTime: number) => void;
 };
 
 export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
@@ -62,10 +78,15 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
     thumbnail: null,
     vrm: null,
     mixer: null,
-    animationName: ANIMS.idle,
+    mixamoMixer: null,
+    loadedMixamoAnimations: new Map(),
+    mixamoActions: new Map(),
+    animationName: null,
+    mixamoAnimationName: null,
     camera: Platform.OS === 'web' ? new PerspectiveCamera(30, undefined, 0.1, 20) : new PerspectiveCamera(70, undefined, 0.1, 2000),
     isLoading: true,
     loadProgress: 0,
+    currentAnimationType: null,
     settings: {
         enableEyeLookAt: true
     },
@@ -77,6 +98,16 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
             get().vrm!.lookAt!.target = null;
         }
         set((state) => ({ ...state, settings: { ...state.settings, ...params } }))
+    },
+
+    updateAnimations: (deltaTime: number) => {
+        const { mixer, mixamoMixer, currentAnimationType } = get();
+
+        if (currentAnimationType === 'vrma' && mixer) {
+            mixer.update(deltaTime);
+        } else if (currentAnimationType === 'mixamo' && mixamoMixer) {
+            mixamoMixer.update(deltaTime);
+        }
     },
 
     changeModel: (name) => {
@@ -190,6 +221,7 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
                         // Update state with loaded model and set loading to false
                         set({
                             vrm,
+                            mixamoMixer: new AnimationMixer(vrm.scene),
                             isLoading: false,
                             loadProgress: 100
                         });
@@ -204,7 +236,7 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
                             resolve();
                         }).catch((animError) => {
                             console.warn('Failed to load animation:', animError);
-                            resolve(); // Still resolve since model loaded successfully
+                            resolve();
                         });
 
                     } catch (error) {
@@ -280,10 +312,121 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
             const action = mixer.clipAction(clip);
             action.play();
 
-            set({ mixer: mixer, animationName: name });
+            set({
+                mixer: mixer,
+                animationName: name,
+                mixamoAnimationName: null,
+                currentAnimationType: 'vrma'
+            });
             console.log(`Animation '${name}' loaded and playing`);
         } catch (error) {
             console.error(`Failed to load animation '${name}':`, error);
+        }
+    },
+
+    loadMixamoAnimation: async (name: MixamoAnimName): Promise<boolean> => {
+        const state = get();
+        const { vrm, mixamoMixer, loadedMixamoAnimations } = state;
+
+        if (!vrm || !mixamoMixer) {
+            console.warn('VRM or mixer not ready');
+            return false;
+        }
+
+        if (loadedMixamoAnimations.has(name)) {
+            console.log(`Mixamo animation '${name}' already loaded`);
+            return true;
+        }
+
+        try {
+            const assetModule = MIXAMO_ANIMS[name];
+            const asset = Asset.fromModule(assetModule);
+
+            await asset.downloadAsync();
+            const uri = asset.localUri || asset.uri;
+
+            if (!uri) {
+                throw new Error(`Failed to resolve URI for animation ${name}`);
+            }
+
+            console.log(`Loading Mixamo animation from: ${uri}`);
+            const vrmAnimationClip = await loadMixamoAnimation(uri, vrm as any);
+
+            if (vrmAnimationClip) {
+                vrmAnimationClip.name = name;
+                loadedMixamoAnimations.set(name, vrmAnimationClip);
+
+                // Create and configure the action properly
+                const action = mixamoMixer.clipAction(vrmAnimationClip);
+                action.reset();
+
+                state.mixamoActions.set(name, action);
+
+                set({
+                    loadedMixamoAnimations: new Map(loadedMixamoAnimations),
+                    mixamoActions: new Map(state.mixamoActions)
+                });
+
+                console.log(`Mixamo animation '${name}' loaded successfully`);
+                console.log(`Animation duration: ${vrmAnimationClip.duration}s`);
+
+                return true;
+            } else {
+                console.error(`Failed to load/convert Mixamo animation: ${name}`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`Error loading Mixamo animation ${name}:`, error);
+            return false;
+        }
+    },
+
+    playMixamoAnimation: (name: MixamoAnimName) => {
+        const state = get();
+        const { mixamoActions, mixer, mixamoMixer } = state;
+
+        console.log(`Attempting to play Mixamo animation: ${name}`);
+
+        // Stop VRM animations first
+        if (mixer) {
+            mixer.stopAllAction();
+            console.log('Stopped VRM animations');
+        }
+
+        // Stop all current Mixamo animations
+        mixamoActions.forEach((action, actionName) => {
+            if (action) {
+                action.stop();
+                action.reset();
+                console.log(`Stopped Mixamo animation: ${actionName}`);
+            }
+        });
+
+        // Get and configure the selected Mixamo animation
+        const action = mixamoActions.get(name);
+        if (action && mixamoMixer) {
+            console.log(`Found action for ${name}, configuring...`);
+
+            // Reset and configure the action
+            action.reset();
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.clampWhenFinished = false;
+            action.enabled = true;
+            action.weight = 1.0;
+            action.timeScale = 1.0;
+
+            // Update state BEFORE playing
+            set({
+                mixamoAnimationName: name,
+                animationName: null,
+                currentAnimationType: 'mixamo'
+            });
+
+            // Start the animation
+            action.play();
+        } else {
+            console.error(`Mixamo animation action not found: ${name}`);
+            console.log('Available actions:', Array.from(mixamoActions.keys()));
         }
     },
 }));

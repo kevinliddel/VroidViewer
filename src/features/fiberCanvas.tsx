@@ -58,11 +58,12 @@ const Lights = () => {
 };
 
 const Model = () => {
-	const { modelUri, vrm, mixer, loadModel } = useModelStore();
+	const { modelUri, vrm, mixer, mixamoMixer, updateAnimations, loadModel } = useModelStore();
 	const { scene } = useThree();
 
 	useFrame((state, delta) => {
 		vrm && vrm.update(delta);
+		mixamoMixer && updateAnimations(delta);
 		mixer && mixer.update(delta);
 	});
 
