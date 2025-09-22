@@ -29,6 +29,8 @@ The model is also rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
     - vrm 1 models:
       <a href="#"><img src="./assets/images/iOS_issue_vrm1.png" width="300"/></a>
 
+- For some reasons, the max texture size on iOS Simulator are "4096", and causes the model to display only after a while or not display at all
+
 ## Known Mobile Issues
 - As you may have seen, The model **VRM1_Constraint_Twist_Sample** (named vrm1.vrm in this project) is the only model that renders correctly
 - The other models are lacking texture
