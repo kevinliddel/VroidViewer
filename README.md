@@ -21,8 +21,9 @@ The model is rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
       <img src="./assets/images/Android_issue_vrm1.png" width="300"/>
 
 ## iOS
-- As for the iOS, it was tested on a development build directly on a physical device (iPhone 11) and an iOS Simulator (iPhone 17 Pro Max).:
-  <img src="./assets/images/iOS_real_device.png" width="300"/><img src="./assets/images/iOS_simulator.png" width="300"/>
+- As for the iOS, it was tested on a development build directly on a physical device (iPhone 11) and an iOS Simulator (iPhone 17 Pro Max):
+
+  <img src="./assets/images/iOS_real_device.png" width="300"/>  <img src="./assets/images/iOS_simulator.png" width="300"/>
 
 The model is also rendered correctly for **VRM1_Constraint_Twist_Sample.vrm**
 
@@ -68,3 +69,4 @@ This works with Expo Go 53, so building isn't required.
 
 
 If you wanna test on Expo Go for iOS, you'll need to update the package and migrate to expo SDK 54
+
