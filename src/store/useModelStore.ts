@@ -65,6 +65,7 @@ export type ModelState = {
     headTracker: HeadTracker | null;
     facialExpression: string;
     expressionMap: { [key: string]: { [expression: string]: number } };
+    expressionNeedsUpdate: boolean;
 };
 
 export type ModelAction = {
@@ -132,6 +133,7 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
         devastated: { sad: 1.0, surprised: 0.3, relaxed: -0.6 },
         enraged: { angry: 1.0, surprised: 0.2, relaxed: -0.8  }
     },
+    expressionNeedsUpdate: false,
 
     applyFacialExpression: () => {
         const { vrm, facialExpression, expressionMap } = get();
@@ -141,23 +143,25 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
         }
 
         try {
-            // First, reset all expressions to 0
             const expressionManager = vrm.expressionManager;
 
-            // Get all available expression names
-            const availableExpressions = expressionManager.expressions;
+            // Get expression names properly
+            const expressionNames = Object.keys(expressionManager.expressions);
 
-            // Reset all expressions
-            for (const expressionName of Object.keys(availableExpressions)) {
-                expressionManager.setValue(expressionName, 0);
-            }
+            // Reset all expressions to 0
+            expressionNames.forEach(expressionName => {
+                try {
+                    expressionManager.setValue(expressionName, 0);
+                } catch (error) {
+                    console.warn(`Failed to reset expression '${expressionName}':`, error);
+                }
+            });
 
             // Apply the current facial expression
             const expressionValues = expressionMap[facialExpression];
 
             if (expressionValues) {
                 for (const [expressionName, value] of Object.entries(expressionValues)) {
-                    // Clamp value between 0 and 1 (negative values are reset to 0)
                     const clampedValue = Math.max(0, Math.min(1, value));
 
                     try {
@@ -166,10 +170,12 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
                         console.warn(`Failed to set expression '${expressionName}':`, error);
                     }
                 }
-
-                // Update the expression manager
-                expressionManager.update();
             }
+
+            expressionManager.update();
+
+            // Mark as updated
+            set({ expressionNeedsUpdate: false });
         } catch (error) {
             console.error('Error applying facial expression:', error);
         }
@@ -186,6 +192,8 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
 
     updateModelSettings(params) {
         const state = get();
+
+        // Handle eye look-at setting
         if (params.enableEyeLookAt !== undefined) {
             if (params.enableEyeLookAt && state.vrm?.lookAt) {
                 state.vrm.lookAt.target = state.camera;
@@ -194,8 +202,8 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
             }
         }
 
-        if (params.enableEyeLookAt !== undefined && state.headTracker) {
-            state.headTracker.setEnabled(params.enableEyeLookAt);
+        if (params.enableHeadTracking !== undefined && state.headTracker) {
+            state.headTracker.setEnabled(params.enableHeadTracking);
         }
 
         set((state) => ({
@@ -205,7 +213,7 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
     },
 
     updateAnimations: (deltaTime: number) => {
-        const { mixer, mixamoMixer, currentAnimationType, headTracker, vrm } = get();
+        const { mixer, mixamoMixer, currentAnimationType, headTracker, expressionNeedsUpdate,vrm } = get();
 
         if (currentAnimationType === 'vrma' && mixer) {
             mixer.update(deltaTime);
@@ -216,6 +224,11 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
         // Update head tracking
         if (headTracker) {
             headTracker.update(deltaTime);
+        }
+
+        // Only apply facial expressions when needed
+        if (vrm?.expressionManager && expressionNeedsUpdate) {
+            get().applyFacialExpression();
         }
 
         // Continuously apply facial expressions
