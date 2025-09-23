@@ -1,9 +1,5 @@
-import { Button, Pressable, Switch, Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { useModelStore } from '../../store/useModelStore';
-import { useState } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { VRMMeta } from '@pixiv/three-vrm';
-import Modal from 'react-native-modal';
 import { ModalButton } from '../modal';
 import { useModal } from '../../hooks/useModal';
 
@@ -26,9 +22,6 @@ const SwitchItem = ({
 			}}
 		>
 			<Text style={{ fontSize: 18 }}>{title}</Text>
-			{/* <View
-				style={{ paddingHorizontal: 12, width: '100%', height: 1, backgroundColor: '#000' }}
-			/> */}
 			<Switch value={value} onValueChange={onValChange} />
 		</View>
 	);

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { getVrmThumbnail } from '../utils/vrm';
 import { loadMixamoAnimation } from '../utils/animation';
 import * as THREE from 'three';
+import { HeadTracker } from "../utils/headTracker";
 
 export const MODELS = {
     vrm0: require('../../assets/models/vrm0.vrm'),
@@ -31,6 +32,7 @@ type MixamoAnimName = keyof typeof MIXAMO_ANIMS;
 
 type ModelSettings = {
     enableEyeLookAt: boolean;
+    enableHeadTracking: boolean;
 };
 
 // Safe plugin registration
@@ -60,6 +62,9 @@ export type ModelState = {
     settings: ModelSettings;
     camera: PerspectiveCamera;
     currentAnimationType: 'vrma' | 'mixamo' | null;
+    headTracker: HeadTracker | null;
+    facialExpression: string;
+    expressionMap: { [key: string]: { [expression: string]: number } };
 };
 
 export type ModelAction = {
@@ -70,6 +75,8 @@ export type ModelAction = {
     loadMixamoAnimation: (name: MixamoAnimName) => Promise<boolean>;
     playMixamoAnimation: (name: MixamoAnimName) => void;
     updateAnimations: (deltaTime: number) => void;
+    setFacialExpression: (expression: string) => void;
+    applyFacialExpression: () => void;
 };
 
 export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
@@ -87,39 +94,165 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
     isLoading: true,
     loadProgress: 0,
     currentAnimationType: null,
+    headTracker: null,
     settings: {
-        enableEyeLookAt: true
+        enableEyeLookAt: true,
+        enableHeadTracking: true
+    },
+    facialExpression: 'relaxed',
+    expressionMap: {
+        default: {},
+        relaxed: { relaxed: 0.9 },
+        smile: { happy: 0.6, relaxed: 0.2 },
+        happy: { happy: 1.0, relaxed: 0.3 },
+        grin: { happy: 0.8, surprised: 0.2 },
+        laugh: { happy: 1.0, surprised: 0.3, relaxed: -0.2 },
+        funnyFace: { happy: 0.7, surprised: 0.4, angry: 0.1 },
+        wink: { happy: 0.5, relaxed: 0.4 },
+        sad: { sad: 1.0, relaxed: -0.3 },
+        crying: { sad: 1.0, surprised: 0.2, relaxed: -0.5 },
+        disappointed: { sad: 0.6, angry: 0.2, relaxed: -0.2 },
+        angry: { angry: 1.0, relaxed: -0.4 },
+        annoyed: { angry: 0.5, sad: 0.2, relaxed: -0.2 },
+        furious: { angry: 1.0, surprised: 0.3, relaxed: -0.6 },
+        surprised: { surprised: 1.0 },
+        shocked: { surprised: 1.0, sad: 0.2 },
+        amazed: { surprised: 0.8, happy: 0.4 },
+        scared: { surprised: 0.8, sad: 0.4, relaxed: -0.5 },
+        worried: { sad: 0.4, angry: 0.2, surprised: 0.3, relaxed: -0.3 },
+        thinking: { relaxed: 0.3, sad: 0.1 },
+        confused: { surprised: 0.4, sad: 0.2, angry: 0.1 },
+        focused: { angry: 0.2, relaxed: 0.4 },
+        sleepy: { relaxed: 0.8, sad: 0.2 },
+        bored: { relaxed: 0.5, sad: 0.3 },
+        shy: { sad: 0.3, happy: 0.2, relaxed: 0.4 },
+        embarrassed: { happy: 0.3, surprised: 0.2, sad: 0.2 },
+        confident: { happy: 0.4, relaxed: 0.6, angry: 0.1 },
+        ecstatic: { happy: 1.0, surprised: 0.5, relaxed: 0.3 },
+        devastated: { sad: 1.0, surprised: 0.3, relaxed: -0.6 },
+        enraged: { angry: 1.0, surprised: 0.2, relaxed: -0.8  }
+    },
+
+    applyFacialExpression: () => {
+        const { vrm, facialExpression, expressionMap } = get();
+
+        if (!vrm?.expressionManager) {
+            return;
+        }
+
+        try {
+            // First, reset all expressions to 0
+            const expressionManager = vrm.expressionManager;
+
+            // Get all available expression names
+            const availableExpressions = expressionManager.expressions;
+
+            // Reset all expressions
+            for (const expressionName of Object.keys(availableExpressions)) {
+                expressionManager.setValue(expressionName, 0);
+            }
+
+            // Apply the current facial expression
+            const expressionValues = expressionMap[facialExpression];
+
+            if (expressionValues) {
+                for (const [expressionName, value] of Object.entries(expressionValues)) {
+                    // Clamp value between 0 and 1 (negative values are reset to 0)
+                    const clampedValue = Math.max(0, Math.min(1, value));
+
+                    try {
+                        expressionManager.setValue(expressionName, clampedValue);
+                    } catch (error) {
+                        console.warn(`Failed to set expression '${expressionName}':`, error);
+                    }
+                }
+
+                // Update the expression manager
+                expressionManager.update();
+            }
+        } catch (error) {
+            console.error('Error applying facial expression:', error);
+        }
+    },
+
+    setFacialExpression: (expression: string) => {
+        set({ facialExpression: expression });
+
+        // Apply the expression immediately after setting it
+        setTimeout(() => {
+            get().applyFacialExpression();
+        }, 0);
     },
 
     updateModelSettings(params) {
-        if (params.enableEyeLookAt) {
-            get().vrm!.lookAt!.target = get().camera
-        } else {
-            get().vrm!.lookAt!.target = null;
+        const state = get();
+        if (params.enableEyeLookAt !== undefined) {
+            if (params.enableEyeLookAt && state.vrm?.lookAt) {
+                state.vrm.lookAt.target = state.camera;
+            } else if (state.vrm?.lookAt) {
+                state.vrm.lookAt.target = null;
+            }
         }
-        set((state) => ({ ...state, settings: { ...state.settings, ...params } }))
+
+        if (params.enableEyeLookAt !== undefined && state.headTracker) {
+            state.headTracker.setEnabled(params.enableEyeLookAt);
+        }
+
+        set((state) => ({
+            ...state,
+            settings: { ...state.settings, ...params }
+        }));
     },
 
     updateAnimations: (deltaTime: number) => {
-        const { mixer, mixamoMixer, currentAnimationType } = get();
+        const { mixer, mixamoMixer, currentAnimationType, headTracker, vrm } = get();
 
         if (currentAnimationType === 'vrma' && mixer) {
             mixer.update(deltaTime);
         } else if (currentAnimationType === 'mixamo' && mixamoMixer) {
             mixamoMixer.update(deltaTime);
         }
+
+        // Update head tracking
+        if (headTracker) {
+            headTracker.update(deltaTime);
+        }
+
+        // Continuously apply facial expressions
+        if (vrm?.expressionManager) {
+            get().applyFacialExpression();
+        }
     },
 
     changeModel: (name) => {
-        set({ modelName: name, modelUri: MODELS[name], thumbnail: null, isLoading: true, loadProgress: 0 })
+        // Clean up existing head tracker
+        const currentHeadTracker = get().headTracker;
+        if (currentHeadTracker) {
+            currentHeadTracker.dispose();
+        }
+
+        set({
+            modelName: name,
+            modelUri: MODELS[name],
+            thumbnail: null,
+            isLoading: true,
+            loadProgress: 0,
+            headTracker: null
+        });
     },
 
     loadModel: async (uri: string, scene: Scene) => {
         const currentVrm = get().vrm;
+        const currentHeadTracker = get().headTracker;
         const loader = new GLTFLoader();
 
+        // Clean up existing head tracker
+        if (currentHeadTracker) {
+            currentHeadTracker.dispose();
+        }
+
         // Set loading state at the beginning
-        set({ isLoading: true, loadProgress: 0 });
+        set({ isLoading: true, loadProgress: 0, headTracker: null });
 
         // Optimized lighting setup
         scene.children.filter(child => child.type.includes('Light')).forEach(light => {
@@ -186,9 +319,9 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
 
                         // Remove old VRM
                         if (currentVrm) {
-                            console.log('Removing old model')
+                            console.log('Removing old model');
                             scene.remove(currentVrm.scene);
-                            VRMUtils.deepDispose(currentVrm.scene)
+                            VRMUtils.deepDispose(currentVrm.scene);
                         }
 
                         // Avoid the typescript error "TS2345: Argument of type 'VRMLookAt | undefined' is not assignable to parameter of type 'VRMLookAt' "
@@ -210,7 +343,7 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
                         // Get thumbnail asynchronously
                         getVrmThumbnail(gltfVrm.parser, vrm.meta.metaVersion).then((thumbnail) => {
                             if (thumbnail?.data.localUri) {
-                                set({ thumbnail: thumbnail.data.localUri })
+                                set({ thumbnail: thumbnail.data.localUri });
                             }
                         }).catch((error) => {
                             console.warn('Failed to get thumbnail:', error);
@@ -218,17 +351,31 @@ export const useModelStore = create<ModelState & ModelAction>()((set, get) => ({
 
                         scene.add(vrm.scene);
 
+                        // Create head tracker
+                        const camera = get().camera;
+                        const headTracker = new HeadTracker(vrm, camera);
+                        headTracker.setEnabled(get().settings.enableHeadTracking);
+
                         // Update state with loaded model and set loading to false
                         set({
                             vrm,
+                            headTracker,
                             mixamoMixer: new AnimationMixer(vrm.scene),
                             isLoading: false,
                             loadProgress: 100
                         });
 
+                        // Configure eye look-at
                         if (get().settings.enableEyeLookAt && vrm.lookAt) {
-                            vrm.lookAt.target = get().camera;
+                            vrm.lookAt.target = camera;
                         }
+
+                        // Apply initial facial expression immediately after model is loaded
+                        console.log('Model loaded, applying initial expression...');
+                        setTimeout(() => {
+                            get().setFacialExpression('relaxed');
+                            get().applyFacialExpression();
+                        }, 100);
 
                         // Load idle animation after model is loaded
                         get().loadAnimation('idle').then(() => {

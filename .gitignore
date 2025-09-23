@@ -8,6 +8,9 @@ node_modules/
 dist/
 web-build/
 .idea
+.vscode/
+android
+ios
 
 # Native
 *.orig.*
