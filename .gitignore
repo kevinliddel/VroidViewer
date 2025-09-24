@@ -7,6 +7,10 @@ node_modules/
 .expo/
 dist/
 web-build/
+.idea
+.vscode/
+android
+ios
 
 # Native
 *.orig.*
